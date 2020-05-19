@@ -11,10 +11,14 @@ const ctx = canvas.getContext('2d');
 var playerCells = [], enemyCells = [];
 
 loadEnemyCells();
-drawGrid();
-drawCells();
+draw();
 
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+	drawGrid();
+	drawCells();
+}
 
 function drawGrid() {
   const prevStrokeStyle = ctx.strokeStyle;
@@ -61,4 +65,31 @@ function drawCell(coordinates, color) {
 	ctx.fillRect(coordinates[0] * cellWidth, coordinates[1] * cellWidth, cellWidth, cellWidth);
 
 	ctx.fillStyle = prevFillStyle;
+}
+
+canvas.onselectstart = function () { return false; }
+
+canvas.addEventListener('mousedown', function(e) {
+  const [x, y] = getCellCoordinates(canvas, e);
+
+  if (x >= columns / 2 ) { return };
+
+  const index = playerCells.findIndex(cell => cell[0] == x && cell[1] == y);
+
+  if (index > -1) {
+    playerCells.splice(index, 1);
+  } else {
+    playerCells.push([x, y]);
+  }
+
+  playerCells = playerCells.sort();
+  draw();
+})
+
+function getCellCoordinates(canvas, event) {
+  const rect = canvas.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+
+  return [Math.floor(x / cellWidth), Math.floor(y / cellWidth)]
 }
