@@ -86,6 +86,21 @@ canvas.addEventListener('mousedown', function(e) {
   draw();
 })
 
+var playButton = document.getElementById('play');
+
+playButton.addEventListener('click', function(e) {
+	const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute('content');
+
+	fetch('games', {
+		method: "POST",
+		headers: { 
+			'Content-Type': 'application/json',
+			'X-CSRF-Token': csrfToken
+		},
+		body: JSON.stringify({player_cells: playerCells})
+	});
+});
+
 function getCellCoordinates(canvas, event) {
   const rect = canvas.getBoundingClientRect();
   const x = event.clientX - rect.left;
