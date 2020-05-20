@@ -50,12 +50,12 @@ function drawGrid() {
 }
 
 function loadEnemyCells() {
-	enemyCells = JSON.parse(canvas.dataset.opponentBoard);
+	enemyCells = JSON.parse(canvas.dataset.opponentBoard).map(coordinates => [coordinates[0] + columns / 2, coordinates[1]]);
 }
 
 function drawCells() {
 	playerCells.forEach(coordinates => drawCell(coordinates, 'red'));
-	enemyCells.forEach(coordinates => drawCell([coordinates[0] + columns / 2, coordinates[1]], 'blue'));
+	enemyCells.forEach(coordinates => drawCell(coordinates, 'blue'));
 }
 
 function drawCell(coordinates, color) {
@@ -65,6 +65,50 @@ function drawCell(coordinates, color) {
 	ctx.fillRect(coordinates[0] * cellWidth, coordinates[1] * cellWidth, cellWidth, cellWidth);
 
 	ctx.fillStyle = prevFillStyle;
+}
+
+function update() {
+	const playerCellValue = 1, enemyCellValue = 9;
+	var grid = [...Array(columns)].map(x => Array(rows));
+	var newPlayerCells = [], newEnemyCells = [];
+
+	playerCells.forEach(cell => grid[cell[0]][cell[1]] = playerCellValue);
+	enemyCells.forEach(cell => grid[cell[0]][cell[1]] = enemyCellValue);
+
+	for (var i = 0; i < columns; i++) {
+		for (var j = 0; j < rows; j++) {
+      const neighbourCellsTotalValue = [
+        grid[mod(i - 1, columns)][mod(j + 1, rows)],
+        grid[mod(i - 1, columns)][j],
+        grid[mod(i - 1, columns)][mod(j - 1, rows)],
+        grid[mod(i + 1, columns)][mod(j + 1, rows)],
+        grid[mod(i + 1, columns)][j],
+        grid[mod(i + 1, columns)][mod(j - 1, rows)],
+        grid[i][mod(j + 1, rows)],
+        grid[i][mod(j - 1, rows)]
+      ].filter(cell => cell).reduce((a, b) => a + b, 0);
+
+			const neighbourPlayerCellsCount = neighbourCellsTotalValue % enemyCellValue;
+			const neighbourEnemyCellsCount = Math.floor(neighbourCellsTotalValue / enemyCellValue);
+			const neighbourCellsCount = neighbourPlayerCellsCount + neighbourEnemyCellsCount;
+
+			if (grid[i][j] && (neighbourCellsCount == 2 || neighbourCellsCount == 3)) {
+				grid[i][j] == playerCellValue ? newPlayerCells.push([i, j]) : newEnemyCells.push([i, j]); 
+			} else if (!grid[i][j] && neighbourCellsCount == 3) {
+				neighbourPlayerCellsCount > neighbourEnemyCellsCount ? newPlayerCells.push([i, j]) : newEnemyCells.push([i, j]);
+			}
+		}
+	}
+
+	playerCells = newPlayerCells;
+	enemyCells = newEnemyCells;
+}
+
+function loop() {
+	update();
+	draw();
+
+  setTimeout(function() {loop();}, 80);
 }
 
 canvas.onselectstart = function () { return false; }
@@ -99,6 +143,8 @@ playButton.addEventListener('click', function(e) {
 		},
 		body: JSON.stringify({player_cells: playerCells})
 	});
+
+	loop();
 });
 
 function getCellCoordinates(canvas, event) {
@@ -107,4 +153,8 @@ function getCellCoordinates(canvas, event) {
   const y = event.clientY - rect.top;
 
   return [Math.floor(x / cellWidth), Math.floor(y / cellWidth)]
+}
+
+function mod(n, m) {
+  return ((n % m) + m) % m;
 }
