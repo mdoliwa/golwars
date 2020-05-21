@@ -9,6 +9,9 @@ canvas.height = rows * cellWidth;
 const ctx = canvas.getContext('2d');
 
 var playerCells = [], enemyCells = [];
+var tickNo = 0;
+var playerCellsHistory = [], enemyCellsHistory = []
+var gameResult;
 
 loadEnemyCells();
 draw();
@@ -105,10 +108,64 @@ function update() {
 }
 
 function loop() {
+	updateHistory();
+
 	update();
+
+	checkGameResult();
+
+	if (gameResult && gameResult.stopReason == 'CYCLE') {
+		console.log(gameResult.message);
+		return;
+	}
+
 	draw();
 
-  setTimeout(function() {loop();}, 80);
+	if (gameResult && gameResult.stopReason == 'NO_CELLS') {
+		console.log(gameResult.message);
+		return;
+	}
+
+	tickNo++;
+
+  setTimeout(function() {loop();}, 50);
+}
+
+function updateHistory() {
+	playerCellsHistory[tickNo] = playerCells;
+	enemyCellsHistory[tickNo] = enemyCells;
+}
+
+function checkGameResult() {
+	var gameResultMessage;
+
+	for (var i = 0; i < tickNo; i++) {
+		if (playerCellsHistory[i].concat(enemyCellsHistory[i]).equals(playerCells.concat(enemyCells))) {
+			if (playerCellsHistory[i-1].length > enemyCellsHistory[i-1].length) {
+				gameResultMessage = "PLAYER WINS";
+			} else if (playerCellsHistory[i-1].length < enemyCellsHistory[i-1].length) {
+				gameResultMessage = "OPPONENT WINS";
+			} else {
+				gameResultMessage = "DRAW";
+			}
+
+			gameResult = {stopReason: 'CYCLE', message: gameResultMessage};
+			return
+		}
+	}
+
+	if (playerCells.length == 0 || enemyCells.length == 0) {
+		if (playerCells.length > enemyCells.length) {
+			gameResultMessage = "PLAYER WINS";
+		} else if (playerCells.length < enemyCells.length) {
+			gameResultMessage = "OPPONENT WINS";
+		} else {
+			gameResultMessage = "DRAW";
+		}
+
+		gameResult = {stopReason: 'NO_CELLS', message: gameResultMessage};
+		return
+	}
 }
 
 canvas.onselectstart = function () { return false; }
@@ -157,4 +214,32 @@ function getCellCoordinates(canvas, event) {
 
 function mod(n, m) {
   return ((n % m) + m) % m;
+}
+
+// Warn if overriding existing method
+if(Array.prototype.equals)
+	console.warn("Overriding existing Array.prototype.equals. Possible causes: New API defines the method, there's a framework conflict or you've got double inclusions in your code.");
+// attach the .equals method to Array's prototype to call it on any array
+Array.prototype.equals = function (array) {
+	// if the other array is a falsy value, return
+	if (!array)
+		return false;
+
+	// compare lengths - can save a lot of time 
+	if (this.length != array.length)
+		return false;
+
+	for (var i = 0, l=this.length; i < l; i++) {
+		// Check if we have nested arrays
+		if (this[i] instanceof Array && array[i] instanceof Array) {
+			// recurse into the nested arrays
+			if (!this[i].equals(array[i]))
+				return false;       
+		}           
+		else if (this[i] != array[i]) { 
+			// Warning - two different object instances will never be equal: {x:20} != {x:20}
+			return false;   
+		}           
+	}       
+	return true;
 }
